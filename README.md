@@ -122,8 +122,6 @@ npm run dev
 
 Open to partnership, feedback, and publishing collaboration.
 
-- 🌐 [www.thejadetrail.com](http://www.thejadetrail.com)
-- 📧 contact@thejadetrail.com
 - 🏢 Kaupeka Tech
 
 ---
