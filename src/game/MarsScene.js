@@ -4,31 +4,92 @@ const TILE = 32
 const MAP_W = 50
 const MAP_H = 40
 
-// Zone definitions — pixel rectangles on the map
 const ZONES = {
   'landing-zone': { x: 4, y: 24, w: 16, h: 12, color: 0x8b4513, label: 'Landing Zone' },
   'crater-rim':   { x: 24, y: 6,  w: 18, h: 14, color: 0x6b3410, label: 'Crater Rim' },
   'canyon-edge':  { x: 6,  y: 4,  w: 14, h: 12, color: 0x4a2508, label: 'Canyon Edge' },
 }
 
-// Discovery/harvest object positions [zone, tileX, tileY]
 const OBJECTS = {
   kid: [
-    { id: 'mars-disc-1', zone: 'landing-zone', tx: 10, ty: 29, emoji: '🪨', label: 'Rust Soil' },
-    { id: 'mars-disc-2', zone: 'crater-rim',   tx: 30, ty: 11, emoji: '⬆️', label: 'Low Gravity' },
-    { id: 'mars-disc-3', zone: 'canyon-edge',  tx: 11, ty: 8,  emoji: '🌪️', label: 'Dust Storm' },
+    { id: 'mars-disc-1', zone: 'landing-zone', tx: 10, ty: 29, label: 'Rust Soil' },
+    { id: 'mars-disc-2', zone: 'crater-rim',   tx: 30, ty: 11, label: 'Low Gravity' },
+    { id: 'mars-disc-3', zone: 'canyon-edge',  tx: 11, ty: 8,  label: 'Dust Storm' },
   ],
   adult: [
-    { id: 'mars-harv-iron', zone: 'crater-rim',   tx: 34, ty: 13, emoji: '⛏️', label: 'Iron Oxide' },
-    { id: 'mars-harv-co2',  zone: 'landing-zone', tx: 8,  ty: 32, emoji: '💨', label: 'CO₂ Vent' },
-    { id: 'clue-finder',    zone: 'canyon-edge',  tx: 13, ty: 6,  emoji: '✦',  label: 'Clue Signal' },
+    { id: 'mars-harv-iron', zone: 'crater-rim',   tx: 34, ty: 13, label: 'Iron Oxide' },
+    { id: 'mars-harv-co2',  zone: 'landing-zone', tx: 8,  ty: 32, label: 'CO₂ Vent' },
+    { id: 'clue-finder',    zone: 'canyon-edge',  tx: 13, ty: 6,  label: 'Clue Signal' },
   ],
 }
+
+// ─── pixel art data ──────────────────────────────────────────────────────────
+// Each frame: 8×12 art pixels rendered at 3× = 24×36 real pixels
+
+const CHAR_PALETTES = {
+  kid:   { H: '#6bc48a', h: '#4aaa6a', V: '#001820', S: '#4a8a5a', s: '#2a6a3a', L: '#3a6a4a', b: '#1a4a2a' },
+  adult: { H: '#72d4c8', h: '#52b4a8', V: '#001820', S: '#3a5a8a', s: '#1a3a6a', L: '#2a4a6a', b: '#0a2a4a' },
+}
+
+// Frame layout: [down-idle, down-walk, up-idle, up-walk, side-idle, side-walk]
+const CHAR_FRAMES = [
+  // 0 – down idle
+  ['..HHHH..', '.HhVVhH.', '.HhVVhH.', '..HHHH..', '.SSSSSS.', '.SsSSsS.', '..SSSS..', '...ss...', '.LL..LL.', '.LL..LL.', '.bb..bb.', '........'],
+  // 1 – down walk (legs spread)
+  ['..HHHH..', '.HhVVhH.', '.HhVVhH.', '..HHHH..', '.SSSSSS.', '.SsSSsS.', '..SSSS..', '...ss...', 'LL....LL', 'LL....LL', 'bb....bb', '........'],
+  // 2 – up idle (back of helmet, no visor)
+  ['..hhhh..', '.HhHHhH.', '.HhHHhH.', '..HHHH..', '.SSSSSS.', '.SsSSsS.', '..SSSS..', '...ss...', '.LL..LL.', '.LL..LL.', '.bb..bb.', '........'],
+  // 3 – up walk
+  ['..hhhh..', '.HhHHhH.', '.HhHHhH.', '..HHHH..', '.SSSSSS.', '.SsSSsS.', '..SSSS..', '...ss...', 'LL....LL', 'LL....LL', 'bb....bb', '........'],
+  // 4 – side idle (facing left; flipX for right)
+  ['..HHHH..', '.HhHVhH.', '.HhHVhH.', '..HHHH..', '..SSSSS.', '..SsSss.', '...SSS..', '....ss..', '..LL.LL.', '..LL.LL.', '..bb.bb.', '........'],
+  // 5 – side walk
+  ['..HHHH..', '.HhHVhH.', '.HhHVhH.', '..HHHH..', '..SSSSS.', '..SsSss.', '...SSS..', '....ss..', '.LL...L.', '.LL...L.', '.bb...b.', '........'],
+]
+
+// Object sprites: 8×8 art pixels at 2× = 16×16 real pixels
+const OBJ_SPRITES = {
+  rock: {
+    pal: { R: '#8a5030', r: '#6a3820', x: '#4a2810' },
+    art: ['..RRR...', '.RrRRr..', 'RrrxRrr.', 'RRrrrRR.', '.RRRRRr.', '..RRRr..', '...RR...', '........'],
+  },
+  gravity: {
+    pal: { G: '#60b0ff', g: '#4090df', w: '#ffffff' },
+    art: ['...ww...', '..GGGG..', '.GgGGgG.', '...GG...', '...GG...', '..GggG..', '.GGggGG.', '........'],
+  },
+  dust: {
+    pal: { D: '#c87040', d: '#a05030', E: '#e08050' },
+    art: ['.EDDDD..', 'EDD.DD..', '.D.dD...', 'DD.DDD..', '.DDDDDE.', '..dDD.DD', '...DD.D.', '........'],
+  },
+  iron: {
+    pal: { I: '#c04030', i: '#902820', P: '#909090', p: '#606060' },
+    art: ['.IIIII..', 'IIIIIII.', 'IiIIIiI.', '.IIIII..', '.....PP.', '....PPp.', '...PPp..', '..PP....'],
+  },
+  co2: {
+    pal: { C: '#70d0c0', c: '#50b0a0', T: '#90e0d0' },
+    art: ['.CC.CC..', 'CCCCCCC.', '.CcTCcC.', '..CCCC..', '.ccccc..', '..ccc...', '...c....', '........'],
+  },
+  clue: {
+    pal: { J: '#00ee88', j: '#00aa66', K: '#aaffcc' },
+    art: ['...JJ...', '..JjJJ..', '.JjKKjJ.', 'JJjKKjJJ', 'JJjKKjJJ', '.JjJJjJ.', '..JJJJ..', '...JJ...'],
+  },
+}
+
+const OBJ_SPRITE_MAP = {
+  'mars-disc-1':    'rock',
+  'mars-disc-2':    'gravity',
+  'mars-disc-3':    'dust',
+  'mars-harv-iron': 'iron',
+  'mars-harv-co2':  'co2',
+  'clue-finder':    'clue',
+}
+
+// ─── scene ────────────────────────────────────────────────────────────────────
 
 export class MarsScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MarsScene' })
-    this.onZoneEnter = null   // callbacks set by React
+    this.onZoneEnter = null
     this.onZoneLeave = null
     this.onInteract  = null
     this.mode = 'kid'
@@ -48,6 +109,71 @@ export class MarsScene extends Phaser.Scene {
     this._updateBarriers()
   }
 
+  // ─── preload: generate pixel art textures ────────────────────────────────
+
+  preload() {
+    this._generateCharacterSprites()
+    this._generateObjectSprites()
+  }
+
+  _generateCharacterSprites() {
+    const SCALE = 3
+    const AW = 8, AH = 12
+    const FW = AW * SCALE   // 24
+    const FH = AH * SCALE   // 36
+    const NUM_FRAMES = CHAR_FRAMES.length  // 6
+
+    Object.entries(CHAR_PALETTES).forEach(([type, pal]) => {
+      const tex = this.textures.createCanvas(`player-${type}`, NUM_FRAMES * FW, FH)
+      const ctx = tex.getContext()
+      ctx.clearRect(0, 0, NUM_FRAMES * FW, FH)
+
+      CHAR_FRAMES.forEach((frame, fi) => {
+        const ox = fi * FW
+        frame.forEach((row, ry) => {
+          ;[...row].forEach((ch, rx) => {
+            if (ch === '.' || !pal[ch]) return
+            ctx.fillStyle = pal[ch]
+            ctx.fillRect(ox + rx * SCALE, ry * SCALE, SCALE, SCALE)
+          })
+        })
+        tex.add(fi, 0, fi * FW, 0, FW, FH)
+      })
+
+      tex.refresh()
+
+      // Animations
+      const k = `player-${type}`
+      const f = (a, b) => [{ key: k, frame: a }, { key: k, frame: b }]
+      this.anims.create({ key: `${type}-walk-down`,  frames: f(0,1), frameRate: 6, repeat: -1 })
+      this.anims.create({ key: `${type}-walk-up`,    frames: f(2,3), frameRate: 6, repeat: -1 })
+      this.anims.create({ key: `${type}-walk-left`,  frames: f(4,5), frameRate: 6, repeat: -1 })
+      this.anims.create({ key: `${type}-walk-right`, frames: f(4,5), frameRate: 6, repeat: -1 })
+      this.anims.create({ key: `${type}-idle`, frames: [{ key: k, frame: 0 }], frameRate: 1, repeat: -1 })
+    })
+  }
+
+  _generateObjectSprites() {
+    const SCALE = 2
+    Object.entries(OBJ_SPRITES).forEach(([name, { pal, art }]) => {
+      const W = art[0].length * SCALE
+      const H = art.length * SCALE
+      const tex = this.textures.createCanvas(`obj-${name}`, W, H)
+      const ctx = tex.getContext()
+      ctx.clearRect(0, 0, W, H)
+      art.forEach((row, ry) => {
+        ;[...row].forEach((ch, rx) => {
+          if (ch === '.' || !pal[ch]) return
+          ctx.fillStyle = pal[ch]
+          ctx.fillRect(rx * SCALE, ry * SCALE, SCALE, SCALE)
+        })
+      })
+      tex.refresh()
+    })
+  }
+
+  // ─── create ───────────────────────────────────────────────────────────────
+
   create() {
     this._buildTerrain()
     this._buildZoneOverlays()
@@ -58,7 +184,6 @@ export class MarsScene extends Phaser.Scene {
     this._setupControls()
     this._buildMinimap()
 
-    // Prompt label
     this.promptText = this.add.text(0, 0, '', {
       fontSize: '11px', color: '#ffffff',
       backgroundColor: '#00000088', padding: { x: 6, y: 3 },
@@ -77,11 +202,9 @@ export class MarsScene extends Phaser.Scene {
   _buildTerrain() {
     const g = this.add.graphics().setDepth(0)
 
-    // Sky
     g.fillStyle(0x1a0a00)
     g.fillRect(0, 0, MAP_W * TILE, MAP_H * TILE)
 
-    // Base ground — rust red tiles with variation
     for (let tx = 0; tx < MAP_W; tx++) {
       for (let ty = 0; ty < MAP_H; ty++) {
         const noise = ((tx * 7 + ty * 13) % 5)
@@ -91,36 +214,28 @@ export class MarsScene extends Phaser.Scene {
       }
     }
 
-    // Canyon — dark chasm at top of map
     g.fillStyle(0x1a0800)
     g.fillRect(0, 0, MAP_W * TILE, 6 * TILE)
-    // Canyon walls
     g.fillStyle(0x5a2008)
     for (let tx = 0; tx < MAP_W; tx++) {
       g.fillRect(tx * TILE, 5 * TILE, TILE - 1, TILE)
     }
 
-    // Crater — circle in upper right
     g.fillStyle(0x3a1a04)
     g.fillCircle(33 * TILE, 13 * TILE, 6 * TILE)
     g.lineStyle(3, 0xc06020)
     g.strokeCircle(33 * TILE, 13 * TILE, 6 * TILE)
 
-    // Rocks scattered
-    const rockPositions = [
-      [7,27],[14,30],[10,26],[20,15],[38,9],[42,12],[15,8],[5,35],[44,28]
-    ]
+    const rockPositions = [[7,27],[14,30],[10,26],[20,15],[38,9],[42,12],[15,8],[5,35],[44,28]]
     g.fillStyle(0x4a2008)
     rockPositions.forEach(([tx, ty]) => {
       g.fillEllipse(tx * TILE + TILE/2, ty * TILE + TILE/2, TILE * 1.5, TILE)
     })
 
-    // Landing pad for adult mode
     g.fillStyle(0x303030)
     g.fillRect(6 * TILE, 34 * TILE, 6 * TILE, 4 * TILE)
     g.lineStyle(2, 0x606060)
     g.strokeRect(6 * TILE, 34 * TILE, 6 * TILE, 4 * TILE)
-    // Ship outline
     g.fillStyle(0x485060)
     g.fillTriangle(9*TILE, 34*TILE, 8*TILE, 37*TILE, 10*TILE, 37*TILE)
   }
@@ -137,7 +252,6 @@ export class MarsScene extends Phaser.Scene {
       g.strokeRect(z.x * TILE, z.y * TILE, z.w * TILE, z.h * TILE)
       this.zoneGraphics[id] = g
 
-      // Zone label
       this.add.text(
         (z.x + z.w / 2) * TILE,
         (z.y + 0.8) * TILE,
@@ -157,18 +271,28 @@ export class MarsScene extends Phaser.Scene {
       const x = obj.tx * TILE + TILE / 2
       const y = obj.ty * TILE + TILE / 2
 
-      // Glow circle
+      // Glow ring
       const g = this.add.graphics().setDepth(3)
-      g.fillStyle(0xffaa33, 0.25)
-      g.fillCircle(x, y, 18)
-      g.lineStyle(1.5, 0xffcc55, 0.6)
-      g.strokeCircle(x, y, 18)
+      g.fillStyle(0xffaa33, 0.18)
+      g.fillCircle(x, y, 20)
+      g.lineStyle(1.5, 0xffcc55, 0.55)
+      g.strokeCircle(x, y, 20)
 
-      // Emoji text
-      const txt = this.add.text(x, y - 2, obj.emoji, { fontSize: '20px' })
-        .setOrigin(0.5).setDepth(4)
+      // Pixel art sprite
+      const spriteKey = `obj-${OBJ_SPRITE_MAP[obj.id] || 'rock'}`
+      const sprite = this.add.image(x, y, spriteKey).setDepth(4).setScale(1.4)
 
-      this.interactables.push({ ...obj, x, y, gfx: g, txt })
+      // Floating idle tween
+      this.tweens.add({
+        targets: sprite,
+        y: y - 4,
+        duration: 1100 + Math.random() * 500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+
+      this.interactables.push({ ...obj, x, y, gfx: g, txt: sprite })
     })
   }
 
@@ -178,27 +302,19 @@ export class MarsScene extends Phaser.Scene {
     const startX = this.mode === 'adult' ? 9 * TILE : 10 * TILE
     const startY = this.mode === 'adult' ? 35 * TILE : 29 * TILE
 
-    // Body
-    const g = this.add.graphics().setDepth(10)
-    // Suit
-    g.fillStyle(this.mode === 'kid' ? 0x4a8a5a : 0x3a5a8a)
-    g.fillRoundedRect(-10, -14, 20, 22, 4)
-    // Helmet
-    g.fillStyle(this.mode === 'kid' ? 0x6bc48a : 0x72d4c8, 0.8)
-    g.fillCircle(0, -18, 10)
-    // Visor
-    g.fillStyle(0x001a2e, 0.9)
-    g.fillEllipse(0, -18, 12, 8)
-    // Legs
-    g.fillStyle(this.mode === 'kid' ? 0x3a6a4a : 0x2a4a6a)
-    g.fillRect(-8, 8, 6, 8)
-    g.fillRect(2, 8, 6, 8)
+    // Drop shadow
+    this._shadowGfx = this.add.graphics().setDepth(9)
 
-    this.player = this.add.container(startX, startY, [g]).setDepth(10)
-    this.playerBody = g
+    this.player = this.add.sprite(startX, startY, `player-${this.mode}`, 0)
+      .setDepth(10)
+      .setOrigin(0.5, 1)  // anchor at feet
+
+    this.player.play(`${this.mode}-idle`)
     this.playerSpeed = 160
     this.currentZone = null
     this.facing = 'down'
+    this._isMoving = false
+    this._lastFacing = 'down'
   }
 
   // ─── zone barriers ────────────────────────────────────────────────────────
@@ -206,9 +322,7 @@ export class MarsScene extends Phaser.Scene {
   _buildBarriers() {
     this.barriers = {}
     Object.entries(ZONES).forEach(([id, z]) => {
-      // Visual barrier line at zone border
-      const g = this.add.graphics().setDepth(5)
-      this.barriers[id] = g
+      this.barriers[id] = this.add.graphics().setDepth(5)
     })
     this._updateBarriers()
   }
@@ -221,14 +335,11 @@ export class MarsScene extends Phaser.Scene {
       if (!this.unlockedZones.includes(id)) {
         g.lineStyle(3, 0xff3333, 0.7)
         g.strokeRect(z.x * TILE, z.y * TILE, z.w * TILE, z.h * TILE)
-        // Dashed effect - draw Xs at border
         g.fillStyle(0xff3333, 0.4)
         for (let i = 0; i < z.w; i++) {
           g.fillRect((z.x + i) * TILE, z.y * TILE, TILE - 2, 3)
           g.fillRect((z.x + i) * TILE, (z.y + z.h) * TILE - 3, TILE - 2, 3)
         }
-      } else {
-        g.clear()
       }
     })
   }
@@ -284,7 +395,7 @@ export class MarsScene extends Phaser.Scene {
     )
   }
 
-  // ─── movement ─────────────────────────────────────────────────────────────
+  // ─── movement + animation ─────────────────────────────────────────────────
 
   _movePlayer() {
     const p = this.player
@@ -296,14 +407,13 @@ export class MarsScene extends Phaser.Scene {
     if (this.cursors.up.isDown    || this.wasd.up.isDown)    vy = -speed
     if (this.cursors.down.isDown  || this.wasd.down.isDown)  vy = speed
 
-    // Diagonal normalise
     if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707 }
 
     const dt = this.sys.game.loop.delta / 1000
+    // Use feet position for collision (origin is bottom-centre)
     const nx = Phaser.Math.Clamp(p.x + vx * dt, 0, MAP_W * TILE)
     const ny = Phaser.Math.Clamp(p.y + vy * dt, 6 * TILE + TILE, MAP_H * TILE)
 
-    // Block locked zones
     let blocked = false
     Object.entries(ZONES).forEach(([id, z]) => {
       if (this.unlockedZones.includes(id)) return
@@ -314,10 +424,28 @@ export class MarsScene extends Phaser.Scene {
 
     if (!blocked) { p.x = nx; p.y = ny }
 
-    // Bob animation
-    if (vx !== 0 || vy !== 0) {
-      p.y += Math.sin(this.time.now / 120) * 0.4
+    const moving = vx !== 0 || vy !== 0
+
+    if (vx < 0)      this.facing = 'left'
+    else if (vx > 0) this.facing = 'right'
+    else if (vy < 0) this.facing = 'up'
+    else if (vy > 0) this.facing = 'down'
+
+    // Flip sprite horizontally for rightward movement
+    p.setFlipX(this.facing === 'right')
+
+    // Switch animation only when state changes
+    if (moving !== this._isMoving || (moving && this._lastFacing !== this.facing)) {
+      this._isMoving = moving
+      this._lastFacing = this.facing
+      const type = this.mode
+      p.play(moving ? `${type}-walk-${this.facing}` : `${type}-idle`, true)
     }
+
+    // Drop shadow at feet
+    this._shadowGfx.clear()
+    this._shadowGfx.fillStyle(0x000000, 0.25)
+    this._shadowGfx.fillEllipse(p.x, p.y + 2, 18, 7)
   }
 
   // ─── zone detection ───────────────────────────────────────────────────────
@@ -351,7 +479,7 @@ export class MarsScene extends Phaser.Scene {
     if (nearest) {
       this.promptText
         .setText(`[E] ${nearest.label}`)
-        .setPosition(this.player.x - 30, this.player.y - 44)
+        .setPosition(this.player.x - 30, this.player.y - 52)
         .setVisible(true)
       this._nearObject = nearest
     } else {

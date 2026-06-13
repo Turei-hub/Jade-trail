@@ -20,6 +20,7 @@ export default function PhaserGame({ mode, unlockedZones, onZoneEnter, onZoneLea
       backgroundColor: '#1a0800',
       parent: containerRef.current,
       scene: scene,
+      pixelArt: true,
     }
 
     gameRef.current = new Phaser.Game(config)

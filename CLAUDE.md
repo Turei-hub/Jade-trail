@@ -61,6 +61,19 @@ npm run dev
 - `src/data/clues/marsClue1.js` — clue object shared between both modes
 - `src/systems/progression.js` — trust gates, zone unlock, harvest, craft, deduct logic
 
+### Sprites (P3 — programmatic pixel art)
+- All textures generated in `preload()` via `this.textures.createCanvas()` — no external image files
+- **Player characters** — 8×12 art pixels at 3× scale = 24×36px per frame
+  - `player-kid` (Matiu): green suit, teal helmet — 6-frame spritesheet (down/up/side idle+walk)
+  - `player-adult` (David): blue suit, aqua helmet — same layout, different palette
+  - 4-directional walk animations (6fps) + idle; right direction uses `flipX` on the side frames
+  - Drop shadow ellipse drawn each frame
+- **Object sprites** — 8×8 art pixels at 2× scale = 16×16px
+  - `obj-rock` (Rust Soil), `obj-gravity` (Low Gravity), `obj-dust` (Dust Storm)
+  - `obj-iron` (Iron Oxide), `obj-co2` (CO₂ Vent), `obj-clue` (Clue Signal)
+  - All objects have a floating tween (sine ease, ~1.1–1.6s cycle)
+- `pixelArt: true` in Phaser config (`PhaserGame.jsx`) for crisp rendering
+
 ### Assets
 - `docs/` — 44 images extracted from the game design PDF (`The_Jade_Trail_Painterly_Sci-Fi_Adventure.pdf`)
 
@@ -73,7 +86,7 @@ npm run dev
 | P1 | Kid Mode — Mars (UI wireframe) | ✅ Done |
 | P2 | Adult Mode — Mars (UI wireframe) | ✅ Done |
 | P2.5 | Phaser walkable map + objectives HUD | ✅ Done |
-| P3 | Pixel art sprites (replace placeholder graphics) | — |
+| P3 | Pixel art sprites (replace placeholder graphics) | ✅ Done |
 | P4 | Opening scene — Earth (abduction cutscene) | — |
 | P5 | Planet 2 — Europa | — |
 | P6 | Unity (C#) migration | — |
@@ -84,10 +97,10 @@ npm run dev
 ## Suggested Next Improvements
 
 ### High priority — makes it feel like a real game
-1. **Pixel art sprites** — replace the Phaser `graphics()` placeholder character and objects with actual sprite sheets. Use a free tool like [Piskel](https://www.piskelapp.com/) or source from [itch.io free assets](https://itch.io/game-assets/free). Matiu = small figure in orange suit, David = larger figure in blue suit.
+1. **Opening cutscene (P4)** — a scroll-based Earth scene before the abduction. React/CSS is enough (no Phaser needed). Sequence: quiet backyard → jade stone glows → light beam → Matiu gone. Sets up the emotional hook before the player lands on Mars.
 2. **Animated tiles** — add subtle animation to the crater and dust storm areas using Phaser tilemaps (Tiled editor exports JSON that Phaser reads directly).
-3. **Walking animation** — 4-frame walk cycle for the player sprite (left/right/up/down directions).
-4. **Sound** — ambient Mars wind loop + interaction chime using Phaser's audio system. Royalty-free from [freesound.org](https://freesound.org).
+3. **Sound** — ambient Mars wind loop + interaction chime using Phaser's audio system. Royalty-free from [freesound.org](https://freesound.org).
+4. **Walk animation polish** — the current 2-frame walk cycle is functional; upgrade to 4 frames per direction for a smoother feel when time allows.
 
 ### Medium priority — better gameplay feel
 5. **Kora dialogue on map** — show Kora's voice lines as floating speech bubbles near the player when entering a zone, instead of only in the sidebar.
